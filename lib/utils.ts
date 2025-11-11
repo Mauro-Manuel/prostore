@@ -21,8 +21,10 @@ export function formatNumberWithDecimal(num: number): string {
 export function formatError(error: any) {
   if (error.name === 'ZodError') {
     // Handle Zod error
-    const fieldErrors = Object.keys(error.errors).map(
-      (field) => error.errors[field].message
+
+    const fieldErrors = error.issues.map(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (issue: any) => `${issue.path.join('.')} - ${issue.message}`
     );
 
     return fieldErrors.join('. ');
@@ -30,7 +32,7 @@ export function formatError(error: any) {
     error.name === 'PrismaClientKnownRequestError' &&
     error.code === 'P2002'
   ) {
-    // Handle Prisma error
+    // Handle Prisma unique constraint error
     const field = error.meta?.target ? error.meta.target[0] : 'Field';
     return `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`;
   } else {
@@ -40,3 +42,31 @@ export function formatError(error: any) {
       : JSON.stringify(error.message);
   }
 }
+
+/*
+export function formatError(error: unknown): string {
+  // 🔹 Zod validation errors
+  if (error instanceof ZodError) {
+    const fieldErrors = error.issues.map(
+      (issue) => `${issue.path.join('.')} - ${issue.message}`
+    );
+    return fieldErrors.join('. ');
+  }
+
+  // 🔹 Prisma unique constraint violation (ex: email duplicado)
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2002'
+  ) {
+    const field = error.meta?.target ? (error.meta.target[0] as string) : 'Field';
+    return `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`;
+  }
+
+  // 🔹 Outros tipos de erro (por exemplo, Error normal)
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  // 🔹 Fallback genérico (objeto ou valor desconhecido)
+  return JSON.stringify(error);
+}*/
