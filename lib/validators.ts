@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { formatNumberWithDecimal } from "./utils.js";
+import { formatNumberWithDecimal } from "./utils";
 
 const currency = z
   .string()

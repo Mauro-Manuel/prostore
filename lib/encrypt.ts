@@ -1,51 +1,17 @@
-const encoder = new TextEncoder();
-const key = new TextEncoder().encode(process.env.ENCRYPTION_KEY); // Retrieve key from env var
+import { hashSync, compareSync } from "bcrypt-ts-edge";
 
-// Hash function with key-based encryption
-export const hash = async (plainPassword: string): Promise<string> => {
-  const passwordData = encoder.encode(plainPassword);
+/**
+ * Gera um hash seguro da senha usando bcrypt-ts-edge.
+ * Esse método é compatível com ambientes Edge e Node.
+ */
+export async function hash(password: string): Promise<string> {
+  return hashSync(password, 10); // 10 = número de rounds de salt
+}
 
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    key,
-    { name: 'HMAC', hash: { name: 'SHA-256' } },
-    false,
-    ['sign', 'verify']
-  );
-
-  const hashBuffer = await crypto.subtle.sign('HMAC', cryptoKey, passwordData);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-};
-
-// Compare function using key from env var
-export const compare = async (
-  plainPassword: string,
-  encryptedPassword: string
-): Promise<boolean> => {
-  const hashedPassword = await hash(plainPassword);
-  return hashedPassword === encryptedPassword;
-};
-// // Use Web Crypto API compatible with Edge Functions
-
-// const encoder = new TextEncoder();
-// const salt = crypto.getRandomValues(new Uint8Array(16)).join('');
-
-// // Hash function
-// export const hash = async (plainPassword: string): Promise<string> => {
-//   const passwordData = encoder.encode(plainPassword + salt);
-//   const hashBuffer = await crypto.subtle.digest('SHA-256', passwordData);
-//   return Array.from(new Uint8Array(hashBuffer))
-//     .map((b) => b.toString(16).padStart(2, '0'))
-//     .join('');
-// };
-
-// // Compare function
-// export const compare = async (
-//   plainPassword: string,
-//   encryptedPassword: string
-// ): Promise<boolean> => {
-//   const hashedPassword = await hash(plainPassword);
-//   return hashedPassword === encryptedPassword;
-// };
+/**
+ * Compara uma senha em texto puro com o hash armazenado no banco.
+ * Retorna true se for válida, false caso contrário.
+ */
+export async function compare(password: string, hashed: string): Promise<boolean> {
+  return compareSync(password, hashed);
+}
