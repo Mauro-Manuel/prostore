@@ -20,11 +20,11 @@ export const signUpDefaultValues = {
 };
 
 export const shippingAddressDefaultValues = {
-  fullName: '',
-  streetAddress: '',
-  city: '',
-  postalCode: '',
-  country: '',
+  fullName: 'John Doe',
+  streetAddress: '123 Main st',
+  city: 'Anytown',
+  postalCode: '12345',
+  country: 'USA',
 };
 
 export const PAYMENT_METHODS = process.env.PAYMENT_METHODS
