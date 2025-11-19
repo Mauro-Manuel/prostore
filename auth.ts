@@ -1,27 +1,26 @@
-import NextAuth from "next-auth";
-import { authConfig } from "./auth.config";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import { prisma } from "@/db/prisma";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { compare } from "@/lib/encrypt";
-import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
+import NextAuth from 'next-auth';
+import { authConfig } from './auth.config';
+import { PrismaAdapter } from '@auth/prisma-adapter';
+import { prisma } from '@/db/prisma';
+import { cookies } from 'next/headers';
+import { compare } from './lib/encrypt';
+import CredentialsProvider from 'next-auth/providers/credentials';
 
-export const config = {
+export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
-    signIn: "/signin",
-    error: "/signin",
+    signIn: '/sign-in',
+    error: '/sign-in',
   },
   session: {
-    strategy: "jwt" as const,
+    strategy: 'jwt' as const,
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       credentials: {
-        email: { type: "email" },
-        password: { type: "password" },
+        email: { type: 'email' },
+        password: { type: 'password' },
       },
       async authorize(credentials) {
         if (credentials == null) return null;
@@ -57,32 +56,29 @@ export const config = {
   ],
   callbacks: {
     ...authConfig.callbacks,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async session({ session, user, trigger, token }: any) {
+    async session({ session, user, trigger, token } : any)  {
       // Set the user ID from the token
       session.user.id = token.sub;
       session.user.role = token.role;
       session.user.name = token.name;
 
-      //console.log(token)
-
       // If there is an update, set the user name
-      if (trigger === "update") {
+      if (trigger === 'update') {
         session.user.name = user.name;
       }
 
       return session;
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async jwt({ token, user, trigger, session }: any) {
+     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async jwt({ token, user, trigger, session } : any) {
       // Assign user fields to token
       if (user) {
         token.id = user.id;
         token.role = user.role;
 
         // If user has no name then use the email
-        if (user.name === "NO_NAME") {
-          token.name = user.email!.split("@")[0];
+        if (user.name === 'NO_NAME') {
+          token.name = user.email!.split('@')[0];
 
           // Update database to reflect the token name
           await prisma.user.update({
@@ -91,9 +87,9 @@ export const config = {
           });
         }
 
-        if (trigger === "signIn" || trigger === "signUp") {
+        if (trigger === 'signIn' || trigger === 'signUp') {
           const cookiesObject = await cookies();
-          const sessionCartId = cookiesObject.get("sessionCartId")?.value;
+          const sessionCartId = cookiesObject.get('sessionCartId')?.value;
 
           if (sessionCartId) {
             const sessionCart = await prisma.cart.findFirst({
@@ -116,30 +112,12 @@ export const config = {
         }
       }
 
+      // Handle session updates
+      if (session?.user.name && trigger === 'update') {
+        token.name = session.user.name;
+      }
+
       return token;
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    authorized({ request, auth }: any) {
-      // Check for session cart cookie
-      if (!request.cookies.get("sessionCartId")) {
-        // Generate new session cart id cookie
-        const sessionCartId = crypto.randomUUID();
-        // clone the request headers
-        const newRequest = new Headers(request.headers);
-        // Create new response and add the new headers
-        const response = NextResponse.next({
-          request: {
-            headers: newRequest,
-          },
-        });
-        // Set newly generated sessionCartId in the response cookies
-        response.cookies.set("sessionCartId", sessionCartId);
-        return response;
-      } else {
-        return true;
-      }
-    },
   },
-};
-
-export const { handlers, auth, signIn, signOut } = NextAuth(config);
+});
